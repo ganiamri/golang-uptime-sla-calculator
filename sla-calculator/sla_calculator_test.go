@@ -6,7 +6,7 @@ import (
 	"math"
 	"testing"
 
-	slacalc "github.com/haidlir/golang-uptime-sla-calculator/sla-calculator"
+	slacalc "github.com/ganiamri/golang-uptime-sla-calculator/sla-calculator"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 
 type UptimeData struct {
 	Timestamp int64
-	Value     int
+	Value     int64
 	Exception bool
 }
 
@@ -124,11 +124,11 @@ var allUpUptimeSeriesData = []UptimeData{
 }
 
 var (
-	expetedSNMPAvailability               float64 = 0.58
-	expetedUptimeAvailability             float64 = 0.6516
-	expetedSLA1Availability               float64 = 0.6774
-	expetedSLA2Availability               float64 = 0.7419
-    expetedSLA2AvailabilityWithException  float64 = 0.9
+	expetedSNMPAvailability              float64 = 0.58
+	expetedUptimeAvailability            float64 = 0.6516
+	expetedSLA1Availability              float64 = 0.6774
+	expetedSLA2Availability              float64 = 0.7419
+	expetedSLA2AvailabilityWithException float64 = 0.9
 
 	expectedAllDown float64 = 0.0
 	expectedAllUp   float64 = 1.0
@@ -138,7 +138,7 @@ func TestUptimeSLACalculator(t *testing.T) {
 	// form each array
 	{
 		endTime := endTime + 100
-		uptimeVals := []int{}
+		uptimeVals := []int64{}
 		timestamps := []int64{}
 		exceptions := []bool{}
 		for _, val := range uptimeSeriesData {
@@ -146,36 +146,50 @@ func TestUptimeSLACalculator(t *testing.T) {
 			timestamps = append(timestamps, val.Timestamp)
 			exceptions = append(exceptions, val.Exception)
 		}
-		calc, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
-		if err != nil {
-			t.Fatalf("An Error should not be accoured: %v", err)
-		}
+		calc := slacalc.NewUptimeSLACalculator()
+
 		t.Run("CalculateSNMPAvailability", func(t *testing.T) {
-			snmpAvai := calc.CalculateSNMPAvailability()
+			snmpAvai, err := calc.CalculateSNMPAvailability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(snmpAvai-expetedSNMPAvailability) >= ACCURACY {
 				t.Errorf("The calculated SNMP Availability value is %v, instead of %v", snmpAvai, expetedSNMPAvailability)
 			}
 		})
 		t.Run("CalculateUptimeAvailability", func(t *testing.T) {
-			uptimeAvai := calc.CalculateUptimeAvailability()
+			uptimeAvai, err := calc.CalculateUptimeAvailability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(uptimeAvai-expetedUptimeAvailability) >= ACCURACY {
 				t.Errorf("The calculated Uptime Availability value is %v, instead of %v", uptimeAvai, expetedUptimeAvailability)
 			}
 		})
 		t.Run("CalculateSLA1Availability", func(t *testing.T) {
-			sla1Avai := calc.CalculateSLA1Availability()
+			sla1Avai, err := calc.CalculateSLA1Availability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla1Avai-expetedSLA1Availability) >= ACCURACY {
 				t.Errorf("The calculated SLA 1 Availability value is %v, instead of %v", sla1Avai, expetedSLA1Availability)
 			}
 		})
 		t.Run("CalculateSLA2Availability", func(t *testing.T) {
-			sla2Avai := calc.CalculateSLA2Availability()
+			sla2Avai, err := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla2Avai-expetedSLA2Availability) >= ACCURACY {
 				t.Errorf("The calculated SLA 2 Availability value is %v, instead of %v", sla2Avai, expetedSLA2Availability)
 			}
 		})
 		t.Run("GetUptimeStateSeriesData", func(t *testing.T) {
-			states := calc.GetUptimeStateSeriesData()
+			states, err := calc.GetUptimeStateSeriesData(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
+
 			stateLen := map[string]int{}
 			for _, state := range states {
 				if _, ok := stateLen[state]; ok {
@@ -206,7 +220,7 @@ func TestUptimeSLACalculator(t *testing.T) {
 	}
 
 	{
-		uptimeVals := []int{}
+		uptimeVals := []int64{}
 		timestamps := []int64{}
 		exceptions := []bool{}
 		for _, val := range allDownUptimeSeriesData {
@@ -214,61 +228,75 @@ func TestUptimeSLACalculator(t *testing.T) {
 			timestamps = append(timestamps, val.Timestamp)
 			exceptions = append(exceptions, val.Exception)
 		}
-		calc, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
-		if err != nil {
-			t.Fatalf("An Error should not be accoured: %v", err)
-		}
+		calc := slacalc.NewUptimeSLACalculator()
+
 		t.Run("CalculateSNMPAvailability: All Down", func(t *testing.T) {
-			snmpAvai := calc.CalculateSNMPAvailability()
+			snmpAvai, err := calc.CalculateSNMPAvailability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(snmpAvai-expectedAllDown) >= ACCURACY {
 				t.Errorf("The calculated SNMP Availability value is %v, instead of %v", snmpAvai, expectedAllDown)
 			}
 		})
 		t.Run("CalculateUptimeAvailability: All Down", func(t *testing.T) {
-			uptimeAvai := calc.CalculateUptimeAvailability()
+			uptimeAvai, err := calc.CalculateUptimeAvailability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(uptimeAvai-expectedAllDown) >= ACCURACY {
 				t.Errorf("The calculated Uptime Availability value is %v, instead of %v", uptimeAvai, expectedAllDown)
 			}
 		})
 		t.Run("CalculateSLA1Availability: All Down", func(t *testing.T) {
-			sla1Avai := calc.CalculateSLA1Availability()
+			sla1Avai, err := calc.CalculateSLA1Availability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla1Avai-expectedAllDown) >= ACCURACY {
 				t.Errorf("The calculated SLA 1 Availability value is %v, instead of %v", sla1Avai, expectedAllDown)
 			}
 		})
 		t.Run("CalculateSLA2Availability: All Down", func(t *testing.T) {
-			sla2Avai := calc.CalculateSLA2Availability()
+			sla2Avai, err := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla2Avai-expectedAllDown) >= ACCURACY {
 				t.Errorf("The calculated SLA 2 Availability value is %v, instead of %v", sla2Avai, expectedAllDown)
 			}
 		})
 		t.Run("CalculateSLA2Availability: All Down with Exception", func(t *testing.T) {
 			exceptions[len(exceptions)-1] = true
-			calc, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
-			if err != nil {
-				t.Fatalf("An Error should not be accoured: %v", err)
-			}
+			calc := slacalc.NewUptimeSLACalculator()
 			expected := 0.0333
-			sla2Avai := calc.CalculateSLA2Availability()
+			sla2Avai, err := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla2Avai-expected) >= ACCURACY {
 				t.Errorf("The calculated SLA 2 Availability value is %v, instead of %v", sla2Avai, expected)
 			}
 		})
-        t.Run("CalculateSLA2Availability: All Down with Exception 2", func(t *testing.T) {
-            exceptions[len(exceptions)-1] = false
-            exceptions[0] = true
-            calc, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
-            if err != nil {
-                t.Fatalf("An Error should not be accoured: %v", err)
-            }
-            expected := 0.0333
-            sla2Avai := calc.CalculateSLA2Availability()
-            if math.Abs(sla2Avai-expected) >= ACCURACY {
-                t.Errorf("The calculated SLA 2 Availability value is %v, instead of %v", sla2Avai, expected)
-            }
-        })
+		t.Run("CalculateSLA2Availability: All Down with Exception 2", func(t *testing.T) {
+			exceptions[len(exceptions)-1] = false
+			exceptions[0] = true
+			calc := slacalc.NewUptimeSLACalculator()
+			expected := 0.0333
+			sla2Avai, err := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
+			if math.Abs(sla2Avai-expected) >= ACCURACY {
+				t.Errorf("The calculated SLA 2 Availability value is %v, instead of %v", sla2Avai, expected)
+			}
+		})
 		t.Run("GetUptimeStateSeriesData: All Down", func(t *testing.T) {
-			states := calc.GetUptimeStateSeriesData()
+			states, err := calc.GetUptimeStateSeriesData(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
+
 			stateLen := map[string]int{}
 			for _, state := range states {
 				if _, ok := stateLen[state]; ok {
@@ -299,7 +327,7 @@ func TestUptimeSLACalculator(t *testing.T) {
 	}
 
 	{
-		uptimeVals := []int{}
+		uptimeVals := []int64{}
 		timestamps := []int64{}
 		exceptions := []bool{}
 		for _, val := range allUpUptimeSeriesData {
@@ -307,36 +335,49 @@ func TestUptimeSLACalculator(t *testing.T) {
 			timestamps = append(timestamps, val.Timestamp)
 			exceptions = append(exceptions, val.Exception)
 		}
-		calc, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
-		if err != nil {
-			t.Fatalf("An Error should not be accoured: %v", err)
-		}
+		calc := slacalc.NewUptimeSLACalculator()
+
 		t.Run("CalculateSNMPAvailability: All Up", func(t *testing.T) {
-			snmpAvai := calc.CalculateSNMPAvailability()
+			snmpAvai, err := calc.CalculateSNMPAvailability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(snmpAvai-expectedAllUp) >= ACCURACY {
 				t.Errorf("The calculated SNMP Availability value is %v, instead of %v", snmpAvai, expectedAllUp)
 			}
 		})
 		t.Run("CalculateUptimeAvailability: All Up", func(t *testing.T) {
-			uptimeAvai := calc.CalculateUptimeAvailability()
+			uptimeAvai, err := calc.CalculateUptimeAvailability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(uptimeAvai-expectedAllUp) >= ACCURACY {
 				t.Errorf("The calculated Uptime Availability value is %v, instead of %v", uptimeAvai, expectedAllUp)
 			}
 		})
 		t.Run("CalculateSLA1Availability: All Up", func(t *testing.T) {
-			sla1Avai := calc.CalculateSLA1Availability()
+			sla1Avai, err := calc.CalculateSLA1Availability(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla1Avai-expectedAllUp) >= ACCURACY {
 				t.Errorf("The calculated SLA 1 Availability value is %v, instead of %v", sla1Avai, expectedAllUp)
 			}
 		})
 		t.Run("CalculateSLA2Availability: All Up", func(t *testing.T) {
-			sla2Avai := calc.CalculateSLA2Availability()
+			sla2Avai, err := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			if math.Abs(sla2Avai-expectedAllUp) >= ACCURACY {
 				t.Errorf("The calculated SLA 2 Availability value is %v, instead of %v", sla2Avai, expectedAllUp)
 			}
 		})
 		t.Run("GetUptimeStateSeriesData", func(t *testing.T) {
-			states := calc.GetUptimeStateSeriesData()
+			states, err := calc.GetUptimeStateSeriesData(startTime, endTime, timestamps, uptimeVals)
+			if err != nil {
+				t.Errorf("An Error should not be accoured: %v", err)
+			}
 			stateLen := map[string]int{}
 			for _, state := range states {
 				if _, ok := stateLen[state]; ok {
@@ -368,7 +409,7 @@ func TestUptimeSLACalculator(t *testing.T) {
 
 	// Error Case
 	{
-		uptimeVals := []int{}
+		uptimeVals := []int64{}
 		timestamps := []int64{}
 		exceptions := []bool{}
 		for _, val := range allUpUptimeSeriesData {
@@ -376,51 +417,53 @@ func TestUptimeSLACalculator(t *testing.T) {
 			timestamps = append(timestamps, val.Timestamp)
 			exceptions = append(exceptions, val.Exception)
 		}
+
+		calc := slacalc.NewUptimeSLACalculator()
 		t.Run("Start Time is (-)", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(-1, endTime, timestamps, uptimeVals, exceptions)
+			_, err := calc.CalculateSNMPAvailability(-1, endTime, timestamps, uptimeVals)
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("Timestamp length unmatches to uptime length", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps[:len(timestamps)-2], uptimeVals, exceptions)
+			_, err := calc.CalculateUptimeAvailability(startTime, endTime, timestamps[:len(timestamps)-2], uptimeVals)
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("Uptime length unmatches to timestamp  length", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals[:len(timestamps)-2], exceptions)
+			_, err := calc.CalculateSLA1Availability(startTime, endTime, timestamps, uptimeVals[:len(timestamps)-2])
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("SLA 2 Nil Exception", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions[:len(exceptions)-2])
+			_, err := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions[:len(exceptions)-2])
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("Older Start Time", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(timestamps[0]+1, endTime, timestamps, uptimeVals, exceptions[:len(exceptions)-2])
+			_, err := calc.CalculateSLA2Availability(timestamps[0]+1, endTime, timestamps, uptimeVals, exceptions[:len(exceptions)-2])
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("Earlier End Time", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(startTime, timestamps[len(timestamps)-1]-1, timestamps, uptimeVals, exceptions[:len(exceptions)-2])
+			_, err := calc.CalculateSLA2Availability(startTime, timestamps[len(timestamps)-1]-1, timestamps, uptimeVals, exceptions[:len(exceptions)-2])
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("Nil Timestamp", func(t *testing.T) {
-			_, err := slacalc.NewUptimeSLACalculator(startTime, endTime, nil, uptimeVals, exceptions[:len(exceptions)-2])
+			_, err := calc.CalculateSLA2Availability(startTime, endTime, nil, uptimeVals, exceptions[:len(exceptions)-2])
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
 		})
 		t.Run("Unordered Timestamp", func(t *testing.T) {
 			timestamps[0], timestamps[len(timestamps)-1] = timestamps[len(timestamps)-1], timestamps[0]
-			_, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
+			_, err := calc.GetUptimeStateSeriesData(startTime, endTime, timestamps, uptimeVals)
 			if err == nil {
 				t.Fatalf("Error should be occured.")
 			}
