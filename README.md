@@ -78,18 +78,19 @@ func main() {
         exceptions = append(exceptions, val.Exception)
     }
     // Create calculator object
-    calc, err := slacalc.NewUptimeSLACalculator(startTime, endTime, timestamps, uptimeVals, exceptions)
-    if err != nil {
-        log.Fatalf("An Error should not be accoured: %v", err)
-    }
-    // Print the calculation result
-    log.Printf("Connectivity SLA: %.5f", calc.CalculateSNMPAvailability())
-    log.Printf("Uptime SLA: %.5f", calc.CalculateUptimeAvailability())
-    log.Printf("(Custom) SLA 1: %.5f", calc.CalculateSLA1Availability())
-    log.Printf("(Custom) SLA 2: %.5f", calc.CalculateSLA2Availability())
+	calc := slacalc.NewUptimeSLACalculator()
+	// Print the calculation result
+	snmpSLA, _ := calc.CalculateSNMPAvailability(startTime, endTime, timestamps, uptimeVals)
+	log.Printf("Connectivity SLA: %.5f", snmpSLA)
+	uptimeSLA, _ := calc.CalculateUptimeAvailability(startTime, endTime, timestamps, uptimeVals)
+	log.Printf("Uptime SLA: %.5f", uptimeSLA)
+	SLA1, _ := calc.CalculateSLA1Availability(startTime, endTime, timestamps, uptimeVals)
+	log.Printf("(Custom) SLA 1: %.5f", SLA1)
+	SLA2, _ := calc.CalculateSLA2Availability(startTime, endTime, timestamps, uptimeVals, exceptions)
+	log.Printf("(Custom) SLA 2: %.5f", SLA2)
 }
 ```
-[More Example...](https://github.com/haidlir/golang-uptime-sla-calculator/tree/master/_example)
+[More Example...](https://github.com/ganiamri/golang-uptime-sla-calculator/tree/master/_example)
 
 ## License
 It is released under the MIT license. See
